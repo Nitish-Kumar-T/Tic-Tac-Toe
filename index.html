@@ -12,6 +12,11 @@
         <div class="game-mode">
             <button id="two-player-mode">2 Players</button>
             <button id="ai-mode">vs AI</button>
+            <select id="ai-difficulty" style="display: none;">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
         </div>
         <div class="score">
             <span id="x-score">X: 0</span>
@@ -29,7 +34,11 @@
             <div class="cell" data-cell-index="8"></div>
         </div>
         <div id="status"></div>
-        <button id="restart">Restart Game</button>
+        <div class="controls">
+            <button id="undo">Undo</button>
+            <button id="redo">Redo</button>
+            <button id="restart">Restart Game</button>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>

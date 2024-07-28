@@ -6,12 +6,18 @@ const twoPlayerModeButton = document.getElementById('two-player-mode');
 const aiModeButton = document.getElementById('ai-mode');
 const xScoreElement = document.getElementById('x-score');
 const oScoreElement = document.getElementById('o-score');
+const undoButton = document.getElementById('undo');
+const redoButton = document.getElementById('redo');
+const aiDifficultySelect = document.getElementById('ai-difficulty');
 
 let currentPlayer = 'X';
 let gameState = ['', '', '', '', '', '', '', '', ''];
 let gameActive = true;
 let aiMode = false;
 let scores = { X: 0, O: 0 };
+let aiDifficulty = 'easy';
+let moveHistory = [];
+let redoStack = [];
 
 const winningConditions = [
     [0, 1, 2],
@@ -38,6 +44,12 @@ function handleCellClick(clickedCellEvent) {
 
     cellPlayed(clickedCell, clickedCellIndex);
     checkResult();
+
+    moveHistory.push({
+        cell: clickedCellIndex,
+        player: currentPlayer
+    });
+    redoStack = [];
 
     if (aiMode && gameActive && currentPlayer === 'O') {
         setTimeout(aiMove, 500);
@@ -88,6 +100,39 @@ function updateScore(winner) {
 }
 
 function aiMove() {
+    let bestMove;
+    
+    switch (aiDifficulty) {
+        case 'easy':
+            bestMove = getRandomEmptyCell();
+            break;
+        case 'medium':
+            bestMove = Math.random() < 0.5 ? getBestMove() : getRandomEmptyCell();
+            break;
+        case 'hard':
+            bestMove = getBestMove();
+            break;
+    }
+
+    cellPlayed(cells[bestMove], bestMove);
+    checkResult();
+
+    moveHistory.push({
+        cell: bestMove,
+        player: currentPlayer
+    });
+    redoStack = [];
+}
+
+function getRandomEmptyCell() {
+    const emptyCells = gameState.reduce((acc, cell, index) => {
+        if (cell === '') acc.push(index);
+        return acc;
+    }, []);
+    return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+}
+
+function getBestMove() {
     let bestScore = -Infinity;
     let bestMove;
 
@@ -103,8 +148,7 @@ function aiMove() {
         }
     }
 
-    cellPlayed(cells[bestMove], bestMove);
-    checkResult();
+    return bestMove;
 }
 
 function minimax(board, depth, isMaximizing) {
@@ -158,6 +202,8 @@ function restartGame() {
         cell.textContent = '';
         cell.classList.remove('x', 'o');
     });
+    moveHistory = [];
+    redoStack = [];
 
     if (aiMode && currentPlayer === 'O') {
         setTimeout(aiMove, 500);
@@ -168,6 +214,60 @@ function setGameMode(mode) {
     aiMode = mode === 'ai';
     restartGame();
     status.textContent = aiMode ? "Playing against AI" : "2 Player Mode";
+    aiDifficultySelect.style.display = aiMode ? 'inline-block' : 'none';
+}
+
+function undo() {
+    if (moveHistory.length === 0) return;
+
+    const lastMove = moveHistory.pop();
+    redoStack.push(lastMove);
+
+    gameState[lastMove.cell] = '';
+    cells[lastMove.cell].textContent = '';
+    cells[lastMove.cell].classList.remove(lastMove.player.toLowerCase());
+
+    currentPlayer = lastMove.player === 'X' ? 'O' : 'X';
+    status.textContent = `Player ${currentPlayer}'s turn`;
+    gameActive = true;
+
+    if (aiMode && moveHistory.length > 0) {
+        const aiMove = moveHistory.pop();
+        redoStack.push(aiMove);
+
+        gameState[aiMove.cell] = '';
+        cells[aiMove.cell].textContent = '';
+        cells[aiMove.cell].classList.remove(aiMove.player.toLowerCase());
+
+        currentPlayer = 'X';
+    }
+}
+
+function redo() {
+    if (redoStack.length === 0) return;
+
+    const move = redoStack.pop();
+    moveHistory.push(move);
+
+    gameState[move.cell] = move.player;
+    cells[move.cell].textContent = move.player;
+    cells[move.cell].classList.add(move.player.toLowerCase());
+
+    currentPlayer = move.player === 'X' ? 'O' : 'X';
+    status.textContent = `Player ${currentPlayer}'s turn`;
+    checkResult();
+
+    if (aiMode && currentPlayer === 'O' && redoStack.length > 0) {
+        const aiMove = redoStack.pop();
+        moveHistory.push(aiMove);
+
+        gameState[aiMove.cell] = aiMove.player;
+        cells[aiMove.cell].textContent = aiMove.player;
+        cells[aiMove.cell].classList.add(aiMove.player.toLowerCase());
+
+        currentPlayer = 'X';
+        checkResult();
+    }
 }
 
 cells.forEach(cell => {
@@ -177,5 +277,10 @@ cells.forEach(cell => {
 restartButton.addEventListener('click', restartGame);
 twoPlayerModeButton.addEventListener('click', () => setGameMode('two-player'));
 aiModeButton.addEventListener('click', () => setGameMode('ai'));
+undoButton.addEventListener('click', undo);
+redoButton.addEventListener('click', redo);
+aiDifficultySelect.addEventListener('change', (e) => {
+    aiDifficulty = e.target.value;
+});
 
 status.textContent = `Player ${currentPlayer}'s turn`;
