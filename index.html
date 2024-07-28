@@ -8,31 +8,39 @@
 </head>
 <body>
     <div class="container">
-        <h1>Tic-Tac-Toe</h1>
-        <div class="game-mode">
-            <button id="two-player-mode">2 Players</button>
-            <button id="ai-mode">vs AI</button>
-            <select id="ai-difficulty" style="display: none;">
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-            </select>
+        <h1>Tic-Tac-Toe v3.0</h1>
+        <div class="game-settings">
+            <div class="game-mode">
+                <button id="two-player-mode">2 Players</button>
+                <button id="ai-mode">vs AI</button>
+                <select id="ai-difficulty" style="display: none;">
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+            <div class="board-size">
+                <label for="board-size-select">Board Size:</label>
+                <select id="board-size-select">
+                    <option value="3">3x3</option>
+                    <option value="4">4x4</option>
+                    <option value="5">5x5</option>
+                </select>
+            </div>
+            <div class="theme-selector">
+                <label for="theme-select">Theme:</label>
+                <select id="theme-select">
+                    <option value="default">Default</option>
+                    <option value="dark">Dark</option>
+                    <option value="colorful">Colorful</option>
+                </select>
+            </div>
         </div>
         <div class="score">
             <span id="x-score">X: 0</span>
             <span id="o-score">O: 0</span>
         </div>
-        <div id="board" class="board">
-            <div class="cell" data-cell-index="0"></div>
-            <div class="cell" data-cell-index="1"></div>
-            <div class="cell" data-cell-index="2"></div>
-            <div class="cell" data-cell-index="3"></div>
-            <div class="cell" data-cell-index="4"></div>
-            <div class="cell" data-cell-index="5"></div>
-            <div class="cell" data-cell-index="6"></div>
-            <div class="cell" data-cell-index="7"></div>
-            <div class="cell" data-cell-index="8"></div>
-        </div>
+        <div id="board" class="board"></div>
         <div id="status"></div>
         <div class="controls">
             <button id="undo">Undo</button>

@@ -1,5 +1,4 @@
 const board = document.getElementById('board');
-const cells = document.querySelectorAll('.cell');
 const status = document.getElementById('status');
 const restartButton = document.getElementById('restart');
 const twoPlayerModeButton = document.getElementById('two-player-mode');
@@ -9,30 +8,45 @@ const oScoreElement = document.getElementById('o-score');
 const undoButton = document.getElementById('undo');
 const redoButton = document.getElementById('redo');
 const aiDifficultySelect = document.getElementById('ai-difficulty');
+const boardSizeSelect = document.getElementById('board-size-select');
+const themeSelect = document.getElementById('theme-select');
 
 let currentPlayer = 'X';
-let gameState = ['', '', '', '', '', '', '', '', ''];
+let gameState = [];
 let gameActive = true;
 let aiMode = false;
 let scores = { X: 0, O: 0 };
 let aiDifficulty = 'easy';
 let moveHistory = [];
 let redoStack = [];
-
-const winningConditions = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6]
-];
+let boardSize = 3;
 
 const clickSound = new Audio('click.mp3');
 const winSound = new Audio('win.mp3');
 const drawSound = new Audio('draw.mp3');
+
+function initializeGame() {
+    boardSize = parseInt(boardSizeSelect.value);
+    gameState = Array(boardSize * boardSize).fill('');
+    board.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`;
+    board.style.gridTemplateRows = `repeat(${boardSize}, 1fr)`;
+    board.innerHTML = '';
+    for (let i = 0; i < boardSize * boardSize; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.setAttribute('data-cell-index', i);
+        cell.style.width = `${300 / boardSize}px`;
+        cell.style.height = `${300 / boardSize}px`;
+        cell.style.fontSize = `${120 / boardSize}px`;
+        cell.addEventListener('click', handleCellClick);
+        board.appendChild(cell);
+    }
+    currentPlayer = 'X';
+    gameActive = true;
+    moveHistory = [];
+    redoStack = [];
+    status.textContent = `Player ${currentPlayer}'s turn`;
+}
 
 function handleCellClick(clickedCellEvent) {
     const clickedCell = clickedCellEvent.target;
@@ -64,11 +78,23 @@ function cellPlayed(clickedCell, clickedCellIndex) {
 }
 
 function checkResult() {
+    const winningConditions = getWinningConditions();
     let roundWon = false;
 
     for (let i = 0; i < winningConditions.length; i++) {
-        const [a, b, c] = winningConditions[i];
-        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+        const winCondition = winningConditions[i];
+        let a = gameState[winCondition[0]];
+        if (a === '') continue;
+        
+        let win = true;
+        for (let j = 1; j < boardSize; j++) {
+            if (gameState[winCondition[j]] !== a) {
+                win = false;
+                break;
+            }
+        }
+        
+        if (win) {
             roundWon = true;
             break;
         }
@@ -93,6 +119,23 @@ function checkResult() {
     status.textContent = `Player ${currentPlayer}'s turn`;
 }
 
+function getWinningConditions() {
+    const winningConditions = [];
+
+    for (let i = 0; i < boardSize; i++) {
+        winningConditions.push(Array.from({length: boardSize}, (_, j) => i * boardSize + j));
+    }
+
+    for (let i = 0; i < boardSize; i++) {
+        winningConditions.push(Array.from({length: boardSize}, (_, j) => i + j * boardSize));
+    }
+
+    winningConditions.push(Array.from({length: boardSize}, (_, i) => i * (boardSize + 1)));
+    winningConditions.push(Array.from({length: boardSize}, (_, i) => (i + 1) * (boardSize - 1)));
+
+    return winningConditions;
+}
+
 function updateScore(winner) {
     scores[winner]++;
     xScoreElement.textContent = `X: ${scores.X}`;
@@ -114,7 +157,7 @@ function aiMove() {
             break;
     }
 
-    cellPlayed(cells[bestMove], bestMove);
+    cellPlayed(board.children[bestMove], bestMove);
     checkResult();
 
     moveHistory.push({
@@ -136,7 +179,7 @@ function getBestMove() {
     let bestScore = -Infinity;
     let bestMove;
 
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < gameState.length; i++) {
         if (gameState[i] === '') {
             gameState[i] = 'O';
             let score = minimax(gameState, 0, false);
@@ -159,7 +202,7 @@ function minimax(board, depth, isMaximizing) {
 
     if (isMaximizing) {
         let bestScore = -Infinity;
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < board.length; i++) {
             if (board[i] === '') {
                 board[i] = 'O';
                 let score = minimax(board, depth + 1, false);
@@ -170,7 +213,7 @@ function minimax(board, depth, isMaximizing) {
         return bestScore;
     } else {
         let bestScore = Infinity;
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < board.length; i++) {
             if (board[i] === '') {
                 board[i] = 'X';
                 let score = minimax(board, depth + 1, true);
@@ -183,38 +226,26 @@ function minimax(board, depth, isMaximizing) {
 }
 
 function checkWinner() {
+    const winningConditions = getWinningConditions();
     for (let i = 0; i < winningConditions.length; i++) {
-        const [a, b, c] = winningConditions[i];
-        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
-            return gameState[a] === 'O' ? 1 : -1;
+        const winCondition = winningConditions[i];
+        let a = gameState[winCondition[0]];
+        if (a === '') continue;
+        
+        let win = true;
+        for (let j = 1; j < boardSize; j++) {
+            if (gameState[winCondition[j]] !== a) {
+                win = false;
+                break;
+            }
+        }
+        
+        if (win) {
+            return a === 'O' ? 1 : -1;
         }
     }
     if (!gameState.includes('')) return 0;
     return null;
-}
-
-function restartGame() {
-    currentPlayer = 'X';
-    gameState = ['', '', '', '', '', '', '', '', ''];
-    gameActive = true;
-    status.textContent = `Player ${currentPlayer}'s turn`;
-    cells.forEach(cell => {
-        cell.textContent = '';
-        cell.classList.remove('x', 'o');
-    });
-    moveHistory = [];
-    redoStack = [];
-
-    if (aiMode && currentPlayer === 'O') {
-        setTimeout(aiMove, 500);
-    }
-}
-
-function setGameMode(mode) {
-    aiMode = mode === 'ai';
-    restartGame();
-    status.textContent = aiMode ? "Playing against AI" : "2 Player Mode";
-    aiDifficultySelect.style.display = aiMode ? 'inline-block' : 'none';
 }
 
 function undo() {
@@ -224,8 +255,8 @@ function undo() {
     redoStack.push(lastMove);
 
     gameState[lastMove.cell] = '';
-    cells[lastMove.cell].textContent = '';
-    cells[lastMove.cell].classList.remove(lastMove.player.toLowerCase());
+    board.children[lastMove.cell].textContent = '';
+    board.children[lastMove.cell].classList.remove(lastMove.player.toLowerCase());
 
     currentPlayer = lastMove.player === 'X' ? 'O' : 'X';
     status.textContent = `Player ${currentPlayer}'s turn`;
@@ -236,8 +267,8 @@ function undo() {
         redoStack.push(aiMove);
 
         gameState[aiMove.cell] = '';
-        cells[aiMove.cell].textContent = '';
-        cells[aiMove.cell].classList.remove(aiMove.player.toLowerCase());
+        board.children[aiMove.cell].textContent = '';
+        board.children[aiMove.cell].classList.remove(aiMove.player.toLowerCase());
 
         currentPlayer = 'X';
     }
@@ -250,37 +281,35 @@ function redo() {
     moveHistory.push(move);
 
     gameState[move.cell] = move.player;
-    cells[move.cell].textContent = move.player;
-    cells[move.cell].classList.add(move.player.toLowerCase());
+    board.children[move.cell].textContent = move.player;
+    board.children[move.cell].classList.add(move.player.toLowerCase());
 
     currentPlayer = move.player === 'X' ? 'O' : 'X';
     status.textContent = `Player ${currentPlayer}'s turn`;
     checkResult();
-
-    if (aiMode && currentPlayer === 'O' && redoStack.length > 0) {
-        const aiMove = redoStack.pop();
-        moveHistory.push(aiMove);
-
-        gameState[aiMove.cell] = aiMove.player;
-        cells[aiMove.cell].textContent = aiMove.player;
-        cells[aiMove.cell].classList.add(aiMove.player.toLowerCase());
-
-        currentPlayer = 'X';
-        checkResult();
-    }
 }
 
-cells.forEach(cell => {
-    cell.addEventListener('click', handleCellClick);
+document.addEventListener('DOMContentLoaded', initializeGame);
+boardSizeSelect.addEventListener('change', initializeGame);
+restartButton.addEventListener('click', initializeGame);
+twoPlayerModeButton.addEventListener('click', () => {
+    aiMode = false;
+    aiDifficultySelect.style.display = 'none';
+    initializeGame();
 });
-
-restartButton.addEventListener('click', restartGame);
-twoPlayerModeButton.addEventListener('click', () => setGameMode('two-player'));
-aiModeButton.addEventListener('click', () => setGameMode('ai'));
+aiModeButton.addEventListener('click', () => {
+    aiMode = true;
+    aiDifficultySelect.style.display = 'inline-block';
+    initializeGame();
+});
 undoButton.addEventListener('click', undo);
 redoButton.addEventListener('click', redo);
 aiDifficultySelect.addEventListener('change', (e) => {
     aiDifficulty = e.target.value;
 });
 
-status.textContent = `Player ${currentPlayer}'s turn`;
+themeSelect.addEventListener('change', (e) => {
+    document.body.className = e.target.value;
+});
+
+initializeGame();
